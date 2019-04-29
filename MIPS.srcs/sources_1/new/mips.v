@@ -47,6 +47,8 @@ module mips(res, clk);
     reg [31:0] imm32_1;
     reg [4:0] writeRegister_R_1;
     reg [4:0] writeRegister_I_1;
+    reg [4:0] readRegister1_1;
+    reg [4:0] readRegister2_1;
     reg RegWrite_1;
     
     // Third pipeline stage registers
@@ -145,7 +147,7 @@ module mips(res, clk);
     
     assign ALUControlBits = imm32_1[5:0];
     
-    ALUControl aluControl(ALUOp_2, ALUControlBits, ALUCode);
+    ALUControl aluControl(ALUOp_1, ALUControlBits, ALUCode);
    
     // Model Data memory
     wire [31:0] memoryReadData;
@@ -153,7 +155,7 @@ module mips(res, clk);
     DataMemory dataMemory(ALUOut_2, readData2_2, MemRead_2, MemWrite_2, memoryReadData);
     
     // Forwarding Unit
-    ForwardingUnit forwardingUnit(readRegister1, readRegister2, RegWrite_2, writeRegister_2,
+    ForwardingUnit forwardingUnit(readRegister1_1, readRegister2_1, RegWrite_2, writeRegister_2,
                                   RegWrite_3, writeRegister_3, ForwardA, ForwardB);
                                   
     // Hazard Detection Unit
@@ -170,6 +172,9 @@ module mips(res, clk);
         RegWrite_1 <= 0;
         RegWrite_2 <= 0;
         RegWrite_3 <= 0;
+        writeRegister_R_1 <= 0;
+        writeRegister_I_1 <= 0;
+        MemRead_1 <= 0;
     end
     
     // Synchrone parts
@@ -197,22 +202,15 @@ module mips(res, clk);
         imm32_1 <= {{16{imm16[15]}},imm16};
         writeRegister_I_1 <= writeRegister_I;
         PCPlus4_1 <= PCPlus4_0;
+        readRegister1_1 <= readRegister1;
+        readRegister2_1 <= readRegister2;
         
         if(ControlSrc)
         begin
             // Non-stall instructions
             writeRegister_R_1 <= writeRegister_R;
             
-//            RegDst_1 <= RegDst; 
-//            ALUSrc_1 <=  ALUSrc;
-//            MemtoReg_1 <= MemtoReg;
-//            RegWrite_1 <= RegWrite;                      
-//            MemRead_1 <= MemRead;
-//            MemWrite_1 <= MemWrite;
-//            Branch_1 <= Branch;
-//            ALUOp_1 <= ALUOp;
-            
-            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} =
+            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <=
             {RegDst  , ALUSrc  , MemtoReg  , RegWrite  , MemRead  , MemWrite  , Branch  , ALUOp  };
         end
         else
@@ -220,7 +218,7 @@ module mips(res, clk);
             // Begin a pipeline stall (bubble)
             // Simmulate add $t0, $t0, $zero
             // Setting all control signals for rtype except ALUOp which we set to 00 for addition
-            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} = 9'b1_0_0_1_0_0_0_00;
+            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <= 9'b1_0_0_1_0_0_0_00;
             
             // Setting write register to $t0
             writeRegister_R_1 <= 5'b01000;         

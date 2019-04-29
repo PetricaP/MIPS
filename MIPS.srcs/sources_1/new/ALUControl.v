@@ -16,6 +16,7 @@ module ALUControl(Op, ControlBits, Code);
     casex({Op, ControlBits}) 
         8'b00_xxxxxx:   Code = `ALU_ADD;
         8'b01_xxxxxx:   Code = `ALU_SUB;
+        8'b11_xxxxxx:   Code = `ALU_AND;
         8'b10_100000:   Code = `ALU_ADD;
         8'b10_100010:   Code = `ALU_SUB;
         8'b10_100100:   Code = `ALU_AND;

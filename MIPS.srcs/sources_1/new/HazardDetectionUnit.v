@@ -11,7 +11,7 @@ module HazardDetectionUnit(readRegister1, readRegister2, MemRead_1, writeRegiste
     
     always @(readRegister1 or readRegister2 or MemRead_1 or writeRegister_I_1)
     begin
-        if(writeRegister_I_1 == readRegister1 || writeRegister_I_1 == readRegister2)
+        if(MemRead_1 && (writeRegister_I_1 == readRegister1 || writeRegister_I_1 == readRegister2))
         begin
             PCWrite = 0;
             IF_ID_Write = 0;

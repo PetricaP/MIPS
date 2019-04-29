@@ -8,6 +8,6 @@ module InstructionMemory(address, dataOut);
     
     initial
         $readmemh("program.mem", memory, 0, 5);
-    
+
     assign dataOut = memory[address >> 2];
 endmodule

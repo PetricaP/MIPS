@@ -17,8 +17,8 @@ module RegisterFile(clk, ra, rb, write, rc, di, do1, do2);
         for(i = 0; i < 32; i = i + 1)
             registers[i] = 0;
     
-    always@(posedge clk)
-    if(write == 1)
+    always@(negedge clk)
+    if(write == 1 && rc != 0)
         registers[rc] = di;
     
     assign do1 = registers[ra];

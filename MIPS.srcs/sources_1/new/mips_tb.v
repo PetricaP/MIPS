@@ -12,6 +12,6 @@ module mips_tb;
     initial
     begin
         #0 clk = 0; res = 0;
-        #60 $finish;
+        #200 $finish;
     end
 endmodule

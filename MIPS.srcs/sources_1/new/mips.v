@@ -29,6 +29,8 @@ module mips(res, clk);
     wire ALUSrc;
     wire RegWrite;
     
+    wire BranchNot;
+    
     // First pipeline stage registers
     reg [31:0] PCPlus4_0;
     reg [31:0] instructionRegister_0;
@@ -119,14 +121,16 @@ module mips(res, clk);
     assign readRegister2 = (ControlSrc) ? initialReadRegister2 : 5'b00000; // $zero
     
     // Control module
-    Control control(opcode, RegDst, Jump, Branch, MemRead, MemtoReg, ALUOp, MemWrite, ALUSrc, RegWrite);
+    Control control(opcode, RegDst, Jump, Branch, MemRead, MemtoReg,
+                    ALUOp, MemWrite, ALUSrc, RegWrite, BranchNot);
     
     // Register values
     wire [31:0] writeData;
     wire [31:0] readData1;
     wire [31:0] readData2;
     
-    RegisterFile regFile(clk, readRegister1, readRegister2, RegWrite_3, writeRegister_3, writeData, readData1, readData2);
+    RegisterFile regFile(clk, readRegister1, readRegister2, RegWrite_3,
+                         writeRegister_3, writeData, readData1, readData2);
     
     assign writeData = (MemtoReg_3) ? memoryReadData_3 : ALUOut_3;
     
@@ -193,7 +197,7 @@ module mips(res, clk);
 	                       : (ForwardCB == 2'b01) ? memoryReadData_3
 	                       : readData2;
 	                       
-	assign compareResult = (compareOperand1 == compareOperand2);
+	assign compareResult = (compareOperand1 == compareOperand2) ^ BranchNot;
 	
 	assign PCSrc = compareResult && Branch;
 	

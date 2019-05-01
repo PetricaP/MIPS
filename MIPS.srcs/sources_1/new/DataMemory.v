@@ -12,10 +12,11 @@ module DataMemory(address, writeData, read, write, dataOut);
     initial
         $readmemh("data.mem", memory, 0, 5);
     
-    always @(address or posedge write)
+    always @(address or posedge read)
         if(read)
             dataOut <= memory[address >> 2];
         
-    always @(posedge write)
-        memory[address >> 2] <= writeData;
+    always @(address or posedge write)
+        if(write)
+            memory[address >> 2] <= writeData;
 endmodule

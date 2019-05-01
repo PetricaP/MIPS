@@ -80,12 +80,4 @@ module HazardDetectionUnit(readRegister1, readRegister2, MemRead_1,
             ControlSrc = 1;
         end
     end
-    
-    always@(Branch or Branch_1 or compareResult)
-    begin
-        if(compareResult && Branch && !Branch_1)
-        begin
-            //IF_ID_Write = 0;
-        end
-    end
 endmodule

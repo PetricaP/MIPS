@@ -133,7 +133,7 @@ module mips(res, clk);
     // Model Address ALU
     wire [31:0] addressALUOut;
     
-    assign addressALUOut = PCPlus4_0 + (imm32_1 << 2);
+    assign addressALUOut = PCPlus4_1 + (imm32_1 << 2);
 
     // Model main ALU
     wire [31:0] operand1 = (ForwardA == 2'b10) ? ALUOut_2
@@ -212,6 +212,7 @@ module mips(res, clk);
         MemRead_1 <= 0;
         PCSrc_1 <= 0;
         IF_Flush_1 <= 0;
+        PCPlus4_1 <= 0;
     end
     
     // Synchrone parts
@@ -228,7 +229,7 @@ module mips(res, clk);
         // Update first pipeline stage IF/ID
         if(IF_ID_Write)
         begin
-
+            PCSrc_1 <= PCSrc;
             if(IF_Flush || IF_Flush_1)
                 instructionRegister_0 <= 32'h00000020;
             else
@@ -245,8 +246,7 @@ module mips(res, clk);
         PCPlus4_1 <= PCPlus4_0;
         readRegister1_1 <= readRegister1;
         readRegister2_1 <= readRegister2;
-        
-        PCSrc_1 <= PCSrc;
+
         IF_Flush_1 <= IF_Flush;
         
         if(ControlSrc)

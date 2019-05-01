@@ -73,6 +73,10 @@ module mips(res, clk);
     // Forwarding wires
     wire [1:0] ForwardA;
     wire [1:0] ForwardB;
+
+	// Forwarding wires for compare operation
+	wire [1:0] ForwardCA;
+	wire [1:0] ForwardCB;
     
     // Hazard detection wires
     wire PCWrite;
@@ -94,8 +98,8 @@ module mips(res, clk);
     assign writeRegister_I = instructionRegister_0[20:16];
     assign writeRegister_R = instructionRegister_0[15:11];
     
-    // If there is a pipeline stall set readRegisters to $t0 and $zero
-    assign readRegister1 = (ControlSrc) ? instructionRegister_0[25:21] : 5'b01000; // $t0
+    // If there is a pipeline stall set readRegisters to $zero and $zero
+    assign readRegister1 = (ControlSrc) ? instructionRegister_0[25:21] : 5'b00000; // $zero
     assign readRegister2 = (ControlSrc) ? instructionRegister_0[20:16] : 5'b00000; // $zero
     
     // PC control
@@ -154,14 +158,14 @@ module mips(res, clk);
 
     DataMemory dataMemory(ALUOut_2, readData2_2, MemRead_2, MemWrite_2, memoryReadData);
     
-    // Forwarding Unit
+    // Forwarding Unit with necessary inputs and outputs
     ForwardingUnit forwardingUnit(readRegister1_1, readRegister2_1, RegWrite_2, writeRegister_2,
                                   RegWrite_3, writeRegister_3, ForwardA, ForwardB);
                                   
-    // Hazard Detection Unit
+    // Hazard Detection Unit necessary inputs and outputs
     HazardDetectionUnit hazardDetectionUnit(readRegister1, readRegister2, MemRead_1,
-                                            writeRegister_I_1, PCWrite, IF_ID_Write, ControlSrc);
-    
+                                            writeRegister_I_1, Branch, RegWrite_1, MemtoReg_1,
+											PCWrite, IF_ID_Write, ControlSrc);
     initial
     begin
         PC <= 0;
@@ -216,12 +220,12 @@ module mips(res, clk);
         else
         begin
             // Begin a pipeline stall (bubble)
-            // Simmulate add $t0, $t0, $zero
+            // Simmulate add $zero, $zero, $zero
             // Setting all control signals for rtype except ALUOp which we set to 00 for addition
             {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <= 9'b1_0_0_1_0_0_0_00;
             
-            // Setting write register to $t0
-            writeRegister_R_1 <= 5'b01000;         
+            // Setting write register to $zero
+            writeRegister_R_1 <= 5'b00000;         
         end
         
         // Update third pipeline stage EX/MEM

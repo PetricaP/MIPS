@@ -21,7 +21,7 @@ module ForwardingUnit(readRegister1_1, readRegister2_1, RegWrite_2,
     always@(readRegister1_1 or readRegister2_1
             or RegWrite_2 or writeRegister_2
             or RegWrite_3 or writeRegister_3)
-    if(RegWrite_2 && writeRegister_2 != 0)
+    if(RegWrite_2)
     begin
         if(writeRegister_2 != 0 && writeRegister_2 == readRegister1_1)
             ForwardA <= 2'b10;

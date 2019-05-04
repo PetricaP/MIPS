@@ -4,6 +4,7 @@ module HazardDetectionUnit(readRegister1, readRegister2, MemRead_1,
 						   writeRegister_I_1, Branch, Branch_1, RegWrite_1,
 						   MemtoReg_1, writeRegister_R_1, RegWrite_2,
 						   writeRegister_2, MemtoReg_2, compareResult,
+						   Jump,
 						   PCWrite, IF_ID_Write, ControlSrc, IF_Flush);
 	// readRegister1 and readRegister2 are values read directly
 	// from the IF/ID registers
@@ -21,6 +22,7 @@ module HazardDetectionUnit(readRegister1, readRegister2, MemRead_1,
 	input [4:0] writeRegister_2;
 	input MemtoReg_2;
 	input compareResult;
+	input Jump;
     output reg PCWrite;
     output reg IF_ID_Write;
     output reg ControlSrc;
@@ -71,13 +73,20 @@ module HazardDetectionUnit(readRegister1, readRegister2, MemRead_1,
         begin
             // Invalidate previous instruction if we jump elsewhere
             // But still write PC
-            if(Branch && !Branch_1 && compareResult)
+            if((Branch && !Branch_1 && compareResult))
                 IF_Flush = 1;
             else
-                IF_Flush = 0;
+                if(!Jump)
+                    IF_Flush = 0;
             IF_ID_Write = 1;
             PCWrite = 1;
             ControlSrc = 1;
         end
     end
+    
+    always @(Jump)
+        if(Jump)
+            IF_Flush = 1;
+        else
+            IF_Flush = 0;
 endmodule

@@ -23,6 +23,7 @@ module mips(res, clk);
     wire ALUSrc;
     wire RegWrite;
     
+    wire WritetoRA;
     wire BranchNot;
     
     // First pipeline stage registers
@@ -46,8 +47,11 @@ module mips(res, clk);
     reg [4:0] readRegister1_1;
     reg [4:0] readRegister2_1;
     reg RegWrite_1;
+    reg [25:0] imm26_1;
     
+    reg Jump_1;
     reg PCSrc_1;
+    reg WritetoRA_1;
     
     // Third pipeline stage registers
     reg [4:0] writeRegister_2;
@@ -96,12 +100,14 @@ module mips(res, clk);
     wire [4:0] writeRegister_R;
     wire [15:0] imm16;
     wire [5:0] shamt;
+    wire [25:0] imm26;
     
     assign opcode = instructionRegister_0[31:26];
     assign imm16 = instructionRegister_0[15:0];
     assign shamt = instructionRegister_0[5:0];
     assign writeRegister_I = instructionRegister_0[20:16];
-    assign writeRegister_R = instructionRegister_0[15:11];  
+    assign writeRegister_R = instructionRegister_0[15:11];
+    assign imm26 = instructionRegister_0[25:0];  
     
     // Initial read registers
     wire [4:0] initialReadRegister1;
@@ -116,7 +122,7 @@ module mips(res, clk);
     
     // Control module
     Control control(opcode, RegDst, Jump, Branch, MemRead, MemtoReg,
-                    ALUOp, MemWrite, ALUSrc, RegWrite, BranchNot);
+                    ALUOp, MemWrite, ALUSrc, RegWrite, BranchNot, WritetoRA);
     
     // Register values
     wire [31:0] writeData;
@@ -134,11 +140,13 @@ module mips(res, clk);
     assign addressALUOut = PCPlus4_1 + (imm32_1 << 2);
 
     // Model main ALU
-    wire [31:0] operand1 = (ForwardA == 2'b10) ? ALUOut_2
+    wire [31:0] operand1 = (WritetoRA_1) ? PCPlus4_1
+                         : (ForwardA == 2'b10) ? ALUOut_2
                          : (ForwardA == 2'b01) ? writeData
                          : readData1_1;
  
-    wire [31:0] operand2 = (ForwardB == 2'b10) ? ALUOut_2
+    wire [31:0] operand2 = (WritetoRA_1) ? 0
+                         : (ForwardB == 2'b10) ? ALUOut_2
                          : (ForwardB == 2'b01) ? writeData
                          : (ALUSrc_1) ? imm32_1 : readData2_1;
     wire Zero;
@@ -169,6 +177,7 @@ module mips(res, clk);
 										    writeRegister_I_1, Branch, Branch_1, RegWrite_1,
 										    MemtoReg_1, writeRegister_R_1, RegWrite_2,
 										    writeRegister_2, MemtoReg_2, compareResult,
+										    Jump,
 										    PCWrite, IF_ID_Write, ControlSrc, IF_Flush);
 	
 	// BEQ compare logic
@@ -184,9 +193,13 @@ module mips(res, clk);
 	
 	assign PCSrc = compareResult && Branch;
 	
+	integer file;
     initial
     begin
-        PC <= 0;
+        file = $fopen("PC.mem", "r");
+        if (!file) $error("could not read file");
+        $fscanf(file, "%h\n", PC);
+        $fclose(file);
         Zero_2 <= 0;
         Branch_2 <= 0;
         Branch_1 <= 0;
@@ -200,6 +213,8 @@ module mips(res, clk);
         PCSrc_1 <= 0;
         IF_Flush_1 <= 0;
         PCPlus4_1 <= 0;
+        WritetoRA_1 <= 0;
+        Jump_1 <= 0;
     end
     
     // Synchrone parts
@@ -211,13 +226,13 @@ module mips(res, clk);
         else
         // Update PC
             if(PCWrite)
-                PC <= (PCSrc_1) ? addressALUOut : (PC + 4);
+                PC <= (Jump) ? {PCPlus4_0[31:26], imm26} : (PCSrc_1) ? addressALUOut : (PC + 4);
     
         // Update first pipeline stage IF/ID
         if(IF_ID_Write)
         begin
             PCSrc_1 <= PCSrc;
-            if(IF_Flush || IF_Flush_1)
+            if(IF_Flush || (IF_Flush_1 & Branch_1))
                 instructionRegister_0 <= 32'h00000020;
             else
                 instructionRegister_0 <= instructionMemoryOut;
@@ -233,14 +248,26 @@ module mips(res, clk);
         PCPlus4_1 <= PCPlus4_0;
         readRegister1_1 <= readRegister1;
         readRegister2_1 <= readRegister2;
+        
+        WritetoRA_1 <= WritetoRA;
 
         IF_Flush_1 <= IF_Flush;
+        Jump_1 <= Jump;
+        imm26_1 <= imm26;
         
         if(ControlSrc)
         begin
             // Non-stall instructions
-            writeRegister_R_1 <= writeRegister_R;
-            
+            if(WritetoRA)
+            begin
+                // Setting write register to $ra
+                writeRegister_R_1 <= 31;
+            end
+            else
+            begin
+                writeRegister_R_1 <= writeRegister_R;
+            end
+                    
             {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <=
             {RegDst  , ALUSrc  , MemtoReg  , RegWrite  , MemRead  , MemWrite  , Branch  , ALUOp  };
         end

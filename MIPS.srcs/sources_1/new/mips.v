@@ -252,7 +252,7 @@ module mips(res, clk);
             {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <= 9'b1_0_0_1_0_0_0_00;
             
             // Setting write register to $zero
-            writeRegister_R_1 <= 5'b00000;         
+            writeRegister_R_1 <= 5'b00000;
         end
         
         // Update third pipeline stage EX/MEM

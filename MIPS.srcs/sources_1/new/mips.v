@@ -1,11 +1,5 @@
 `timescale 1ns / 1ps
 
-`define ALU_ADD 4'b0010
-`define ALU_SUB 4'b0110
-`define ALU_AND 4'b0000
-`define ALU_OR  4'b0001
-`define ALU_SLT 4'b0111
-`define ALU_NOR 4'b1100
 
 module mips(res, clk);
     input res;
@@ -148,23 +142,12 @@ module mips(res, clk);
                          : (ForwardB == 2'b01) ? writeData
                          : (ALUSrc_1) ? imm32_1 : readData2_1;
     wire Zero;
-    reg [31:0] ALUOut;
+    wire [31:0] ALUOut;
     wire [3:0] ALUCode;
     
     wire [5:0] ALUControlBits;
-
-    always @(operand1 or operand2 or ALUCode)
-    casex(ALUCode)
-        `ALU_AND:    ALUOut = operand1 & operand2;
-        `ALU_OR :    ALUOut = operand1 | operand2;
-        `ALU_ADD:    ALUOut = operand1 + operand2;
-        `ALU_SUB:    ALUOut = operand1 - operand2;
-        `ALU_SLT:    ALUOut = operand1 < operand2;
-        `ALU_NOR:    ALUOut = ~(operand1 | operand2);
-        default:    ALUOut = 0;
-    endcase
     
-    assign Zero = (ALUOut == 0);
+    ALU alu(ALUCode, ALUControlBits, operand1, operand2, ALUOut, Zero);
     
     assign ALUControlBits = imm32_1[5:0];
     

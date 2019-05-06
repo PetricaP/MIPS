@@ -2,7 +2,7 @@ main:
 	addi $a0, $zero, 5
 	jal subtract
 # some instructions to make sure we're jumping
-	add $t0, $zero, $zero
+	add $s1, $zero, $zero
 	add $t0, $zero, $zero
 	add $t0, $zero, $zero
 	add $t0, $zero, $zero
@@ -19,4 +19,7 @@ subtract:
 	add $t0, $zero, $zero
 	add $t0, $zero, $zero
 # here we should theoretically jump back
+	jr $ra
+# add a nop because we need it
+	add $t0, $zero, $zero
 .end subtract

@@ -1,15 +1,17 @@
-beq $t0, $t0, 4
+addi $t0, $zero, 4
+addi $t1, $zero, 4
+beq $t0, $t1, 4
 # bubble
 addi $t1, $t2, 4
-sub $t4, $t3, $t2
+addi $t4, $t2, 4
 add $t5, $t2, $t3
 sw $t6, 2($t2)
 lw $t7, 8($t2)
-add $t1, $t7, $zero
-add $t1, $t7, $zero
-add $t1, $t7, $zero
-add $t1, $t7, $zero
-add $t1, $t7, $zero
-add $t1, $t7, $zero
-add $t1, $t7, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
+add $t3, $zero, $zero
 

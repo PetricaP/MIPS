@@ -10,17 +10,15 @@ module RegisterFile(clk, ra, rb, write, rc, di, do1, do2);
     output [31:0] do1;
     output [31:0] do2;
     
-    reg [31:0] registers[0:31];
+    reg [31:0] registers[0:30];
     
-    integer i;
     initial
-        for(i = 0; i < 32; i = i + 1)
-            registers[i] = 0;
+        $readmemh("registers.mem", registers);
     
     always@(negedge clk)
     if(write == 1 && rc != 0)
-        registers[rc] = di;
+        registers[rc - 1] = di;
     
-    assign do1 = registers[ra];
-    assign do2 = registers[rb];
+    assign do1 = (ra == 0) ? 0 : registers[ra - 1];
+    assign do2 = (rb == 0) ? 0 : registers[rb - 1];
 endmodule

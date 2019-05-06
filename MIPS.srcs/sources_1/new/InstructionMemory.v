@@ -7,7 +7,7 @@ module InstructionMemory(address, dataOut);
     reg [31:0] memory[0:1<<32 - 1];
     
     initial
-        $readmemh("program.mem", memory, 32'h40000000 >> 2);
+        $readmemh("program.mem", memory, 32'h400000 >> 2);
 
     assign dataOut = memory[address >> 2];
 endmodule

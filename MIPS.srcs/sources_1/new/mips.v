@@ -25,6 +25,7 @@ module mips(res, clk);
     
     wire WritetoRA;
     wire BranchNot;
+    wire RegtoPC;
     
     // First pipeline stage registers
     reg [31:0] PCPlus4_0;
@@ -49,9 +50,11 @@ module mips(res, clk);
     reg RegWrite_1;
     reg [25:0] imm26_1;
     
-    reg Jump_1;
     reg PCSrc_1;
     reg WritetoRA_1;
+        
+    reg IF_Flush_1;
+    reg RegtoPC_1;
     
     // Third pipeline stage registers
     reg [4:0] writeRegister_2;
@@ -63,8 +66,10 @@ module mips(res, clk);
     reg Branch_2;
     reg [31:0] ALUOut_2;
     reg Zero_2;
+    reg ALUSrc_2;
     
-    reg IF_Flush_1;
+    reg [4:0] readRegister2_2;
+
     
     // Fourth pipeline stage registers
     reg [4:0] writeRegister_3;
@@ -72,6 +77,8 @@ module mips(res, clk);
     reg MemtoReg_3;
     reg [31:0] memoryReadData_3;
     reg [31:0] ALUOut_3;
+    reg MemWrite_3;
+    reg memoryWriteData_3;
     
     // Forwarding wires
     wire [1:0] ForwardA;
@@ -80,6 +87,10 @@ module mips(res, clk);
 	// Forwarding wires for compare operation
 	wire [1:0] ForwardCA;
 	wire [1:0] ForwardCB;
+	
+	// Forwarding wires for sw
+	wire [1:0] ForwardMB;
+	wire [1:0] ForwardRB;
 	
 	// Wires for Branching
 	wire [31:0] compareOperand1;
@@ -101,6 +112,7 @@ module mips(res, clk);
     wire [15:0] imm16;
     wire [5:0] shamt;
     wire [25:0] imm26;
+    wire [5:0] funct;
     
     assign opcode = instructionRegister_0[31:26];
     assign imm16 = instructionRegister_0[15:0];
@@ -108,6 +120,7 @@ module mips(res, clk);
     assign writeRegister_I = instructionRegister_0[20:16];
     assign writeRegister_R = instructionRegister_0[15:11];
     assign imm26 = instructionRegister_0[25:0];  
+    assign funct = shamt;
     
     // Initial read registers
     wire [4:0] initialReadRegister1;
@@ -121,8 +134,8 @@ module mips(res, clk);
     assign readRegister2 = (ControlSrc) ? initialReadRegister2 : 5'b00000; // $zero
     
     // Control module
-    Control control(opcode, RegDst, Jump, Branch, MemRead, MemtoReg,
-                    ALUOp, MemWrite, ALUSrc, RegWrite, BranchNot, WritetoRA);
+    Control control(opcode, funct, RegDst, Jump, Branch, MemRead, MemtoReg,
+                    ALUOp, MemWrite, ALUSrc, RegWrite, BranchNot, WritetoRA, RegtoPC);
     
     // Register values
     wire [31:0] writeData;
@@ -163,21 +176,25 @@ module mips(res, clk);
    
     // Model Data memory
     wire [31:0] memoryReadData;
+    wire [31:0] memoryWriteData;
+    
+    assign memoryWriteData = (ForwardMB == 2'b10) ? memoryReadData_3 : (ForwardMB == 2'b01) ? ALUOut_3 : readData2_2;
 
-    DataMemory dataMemory(ALUOut_2, readData2_2, MemRead_2, MemWrite_2, memoryReadData);
+    DataMemory dataMemory(ALUOut_2, memoryWriteData, MemRead_2, MemWrite_2, memoryReadData);
     
     // Forwarding Unit with necessary inputs and outputs
     ForwardingUnit forwardingUnit(readRegister1_1, readRegister2_1, RegWrite_2,
-                                  writeRegister_2, RegWrite_3, writeRegister_3,
-                                  initialReadRegister1, initialReadRegister2, Branch, MemtoReg_3,
-                                  ForwardA, ForwardB, ForwardCA, ForwardCB);
+                                  writeRegister_2, RegWrite_3, writeRegister_3, MemtoReg_2,
+                                  initialReadRegister1, initialReadRegister2, Branch, MemtoReg_3, MemWrite_3,
+                                  ALUSrc_1, ALUSrc_2, RegtoPC, MemWrite_2, readRegister2_2, MemWrite_1,
+                                  ForwardA, ForwardB, ForwardCA, ForwardCB, ForwardMB, ForwardRB);
                                   
     // Hazard Detection Unit necessary inputs and outputs
 	HazardDetectionUnit hazardDetectionUnit(initialReadRegister1, initialReadRegister2, MemRead_1,
 										    writeRegister_I_1, Branch, Branch_1, RegWrite_1,
 										    MemtoReg_1, writeRegister_R_1, RegWrite_2,
 										    writeRegister_2, MemtoReg_2, compareResult,
-										    Jump,
+										    Jump, RegtoPC, RegDst_1, MemWrite,
 										    PCWrite, IF_ID_Write, ControlSrc, IF_Flush);
 	
 	// BEQ compare logic
@@ -214,7 +231,7 @@ module mips(res, clk);
         IF_Flush_1 <= 0;
         PCPlus4_1 <= 0;
         WritetoRA_1 <= 0;
-        Jump_1 <= 0;
+        RegtoPC_1 <= 0;
     end
     
     // Synchrone parts
@@ -226,7 +243,7 @@ module mips(res, clk);
         else
         // Update PC
             if(PCWrite)
-                PC <= (Jump) ? {PCPlus4_0[31:26], imm26} : (PCSrc_1) ? addressALUOut : (PC + 4);
+                PC <= (RegtoPC) ? compareOperand1 : (Jump) ? {PCPlus4_0[31:26], imm26} : (PCSrc_1) ? addressALUOut : (PC + 4);
     
         // Update first pipeline stage IF/ID
         if(IF_ID_Write)
@@ -248,11 +265,11 @@ module mips(res, clk);
         PCPlus4_1 <= PCPlus4_0;
         readRegister1_1 <= readRegister1;
         readRegister2_1 <= readRegister2;
+        RegtoPC_1 <= RegtoPC;
         
         WritetoRA_1 <= WritetoRA;
 
         IF_Flush_1 <= IF_Flush;
-        Jump_1 <= Jump;
         imm26_1 <= imm26;
         
         if(ControlSrc)
@@ -275,8 +292,8 @@ module mips(res, clk);
         begin
             // Begin a pipeline stall (bubble)
             // Simmulate add $zero, $zero, $zero
-            // Setting all control signals for rtype except ALUOp which we set to 00 for addition
-            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <= 9'b1_0_0_1_0_0_0_00;
+            // Setting all control signals for rtype except ALUOp which we set to 00 for addition plus RegWrite to 0
+            {RegDst_1, ALUSrc_1, MemtoReg_1, RegWrite_1, MemRead_1, MemWrite_1, Branch_1, ALUOp_1} <= 9'b1_0_0_0_0_0_0_00;
             
             // Setting write register to $zero
             writeRegister_R_1 <= 5'b00000;
@@ -287,11 +304,14 @@ module mips(res, clk);
         MemRead_2 <= MemRead_1;
         MemWrite_2 <= MemWrite_1;
         MemtoReg_2 <= MemtoReg_1;
-        readData2_2 <= readData2_1;
+        readData2_2 <= (ForwardRB == 2'b01) ? memoryReadData_3 : (ForwardRB == 2'b10) ? ALUOut_2 : (ForwardRB == 2'b11) ? ALUOut_3 : readData2_1;
         Branch_2 <= Branch_1;
         RegWrite_2 <= RegWrite_1;
         ALUOut_2 <= ALUOut;
         Zero_2 <= Zero;
+        ALUSrc_2 <= ALUSrc_1;
+        
+        readRegister2_2 <= readRegister2_1;
         
         // Update fourth pipeline stage MEM/WB
         writeRegister_3 <= writeRegister_2;
@@ -299,5 +319,7 @@ module mips(res, clk);
         MemtoReg_3 <= MemtoReg_2;
         memoryReadData_3 <= memoryReadData;
         ALUOut_3 <= ALUOut_2;
+        MemWrite_3 <= MemWrite_2;
+        memoryWriteData_3 <= memoryWriteData;
     end
 endmodule

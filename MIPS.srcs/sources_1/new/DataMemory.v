@@ -7,16 +7,16 @@ module DataMemory(address, writeData, read, write, dataOut);
     input write;
     output reg [31:0] dataOut;
     
-    reg [31:0] memory[0:255];
+    reg [31:0] memory[0:(1<<32 - 1)];
     
     initial
-        $readmemh("data.mem", memory, 0, 5);
+        $readmemh("data.mem", memory);
     
     always @(address or posedge read)
         if(read)
             dataOut <= memory[address >> 2];
         
-    always @(address or posedge write)
+    always @(address or posedge write or writeData)
         if(write)
             memory[address >> 2] <= writeData;
 endmodule
